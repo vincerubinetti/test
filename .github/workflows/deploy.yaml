@@ -22,14 +22,18 @@ jobs:
       folder-b: ${{ steps.changes.outputs.folder-b }}
 
   job-a:
+    runs-on: ubuntu-latest
     needs: path-changes
     if: ${{ needs.path-changes.outputs.folder-a == 'true' }}
-    run: sleep 10
+    steps:
+      - run: sleep 10
 
   job-b:
+    runs-on: ubuntu-latest
     needs: path-changes
     if: ${{ needs.path-changes.outputs.folder-b == 'true' }}
-    run: sleep 10
+    steps:
+      - run: sleep 10
 
   deploy:
     needs:
@@ -38,7 +42,7 @@ jobs:
     if: |
       always() &&
       (needs.job-a.result == 'success' || needs.job-a.result == 'skipped') &&
-      (needs.job-b == 'success' || needs.job-b == 'skipped')
+      (needs.job-b.result == 'success' || needs.job-b.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
