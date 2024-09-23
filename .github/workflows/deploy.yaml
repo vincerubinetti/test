@@ -1,0 +1,62 @@
+name: Deploy backend functions and frontend app
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  path-changes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            folder-a:
+              - "folder-a/**"
+            folder-b:
+              - "folder-b/**"
+    outputs:
+      folder-a: ${{ steps.changes.outputs.folder-a }}
+      folder-b: ${{ steps.changes.outputs.folder-b }}
+
+  job-a:
+    needs: path-changes
+    if: ${{ needs.path-changes.outputs.folder-a == 'true' }}
+    run: sleep 10
+
+  job-b:
+    needs: path-changes
+    if: ${{ needs.path-changes.outputs.folder-b == 'true' }}
+    run: sleep 10
+
+  deploy:
+    needs:
+      - job-a
+      - job-b
+    if: |
+      always() &&
+      (needs.job-a.result == 'success' || needs.job-a.result == 'skipped') &&
+      (needs.job-b == 'success' || needs.job-b == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v3.0
+        with:
+          publish-dir: ./
+          production-deploy: true
+          production-branch: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: Deploy from GitHub Actions
+          enable-pull-request-comment: false
+          enable-commit-comment: false
+          overwrites-pull-request-comment: false
+          fails-without-credentials: true
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        timeout-minutes: 1
